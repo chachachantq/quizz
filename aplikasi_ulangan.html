@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamMar — Aplikasi Ujian</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=700;900&family=DM+Sans:wght=300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f1a;
+    --surface: #141726;
+    --surface2: #1c2035;
+    --border: #2a2f4a;
+    --accent: #6c8eff;
+    --accent2: #ff6b8a;
+    --accent3: #43e8b0;
+    --text: #e8ecff;
+    --muted: #7a82a8;
+    --correct: #43e8b0;
+    --wrong: #ff6b8a;
+    --warn: #ffc14d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(108,142,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    animation: float1 8s ease-in-out infinite alternate;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px; right: -200px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(255,107,138,0.1) 0%, transparent 70%);
+    pointer-events: none;
+    animation: float2 10s ease-in-out infinite alternate;
+  }
+
+  @keyframes float1 { from { transform: translate(0,0); } to { transform: translate(40px, 60px); } }
+  @keyframes float2 { from { transform: translate(0,0); } to { transform: translate(-40px, -50px); } }
+
+  .screen {
+    display: none;
+    width: 100%;
+    max-width: 760px;
+    animation: fadeIn .5s ease;
+  }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: none; } }
+
+  /* Welcome */
+  .welcome-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 56px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .welcome-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .logo-badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+  .welcome-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 7vw, 58px);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--text) 40%, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .welcome-sub {
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 300;
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .info-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 16px;
+  }
+  .info-item .val {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+  }
+  .info-item .lbl {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-top: 4px;
+  }
+
+  .name-input-wrap {
+    margin-bottom: 28px;
+    text-align: left;
+  }
+  .name-input-wrap label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+  .name-input-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s;
+  }
+  .name-input-wrap input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,142,255,.15);
+  }
+  .name-input-wrap input::placeholder { color: var(--muted); }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, var(--accent), #4a6ef5);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    padding: 16px 40px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 8px 32px rgba(108,142,255,.3);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(108,142,255,.45); }
+  .btn-primary:active { transform: none; }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+  .quiz-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .q-counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .q-counter span { color: var(--text); }
+
+  .timer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent3);
+    transition: color .3s;
+  }
+  .timer-wrap.warn { color: var(--warn); border-color: rgba(255,193,77,.3); }
+  .timer-wrap.danger { color: var(--wrong); border-color: rgba(255,107,138,.3); animation: timerPulse .6s ease-in-out infinite; }
+  @keyframes timerPulse { 0%,100%{opacity:1;} 50%{opacity:.6;} }
+
+  .progress-bar {
+    background: var(--surface2);
+    border-radius: 100px;
+    height: 6px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 100px;
+    transition: width .5s cubic-bezier(.4,0,.2,1);
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px 40px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .question-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-bottom: 12px;
+  }
+  .question-text {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(18px, 3.5vw, 24px);
+    font-weight: 700;
+    line-height: 1.45;
+    color: var(--text);
+  }
+
+  .options-grid { display: grid; gap: 12px; }
+
+  .option-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 22px;
+    cursor: pointer;
+    transition: all .18s ease;
+    text-align: left;
+    width: 100%;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(108,142,255,.08);
+    transform: translateX(4px);
+  }
+  .option-btn:disabled { cursor: default; }
+
+  .option-letter {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+    transition: all .18s;
+  }
+
+  .option-btn.selected .option-letter { background: var(--muted); border-color: var(--muted); color: #fff; }
+  .option-btn.selected { border-color: var(--muted); background: rgba(122,130,168,.12); }
+  .option-btn.correct { border-color: var(--correct); background: rgba(67,232,176,.1); }
+  .option-btn.correct .option-letter { background: var(--correct); border-color: var(--correct); color: #0d0f1a; }
+  .option-btn.wrong { border-color: var(--wrong); background: rgba(255,107,138,.1); }
+  .option-btn.wrong .option-letter { background: var(--wrong); border-color: var(--wrong); color: #fff; }
+
+  .option-text { flex: 1; line-height: 1.4; }
+
+  .nav-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  .btn-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 100px;
+    padding: 13px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .18s;
+  }
+  .btn-next:hover:not(:disabled) { border-color: var(--accent); background: rgba(108,142,255,.1); color: var(--accent); }
+  .btn-next:disabled { opacity:.3; cursor:not-allowed; }
+  .btn-next.highlight {
+    background: linear-gradient(135deg, var(--accent3), #2bc88a);
+    border-color: transparent;
+    color: #0d0f1a;
+    box-shadow: 0 6px 24px rgba(67,232,176,.3);
+  }
+  .btn-next.highlight:hover { transform: translateY(-2px); }
+
+  /* Result */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 52px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent3), var(--accent), var(--accent2));
+  }
+
+  .score-ring {
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .score-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+  .score-ring .score-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+  }
+  .score-ring .score-lbl {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    position: relative;
+    z-index: 1;
+    margin-top: 4px;
+  }
+
+  .result-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 5vw, 38px);
+    font-weight: 900;
+    margin-bottom: 10px;
+  }
+  .result-sub { color: var(--muted); font-size: 15px; margin-bottom: 36px; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 14px;
+  }
+  .stat-box .sv { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; display: block; }
+  .stat-box .sl { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
+  .correct-col { color: var(--correct); }
+  .wrong-col { color: var(--wrong); }
+  .time-col { color: var(--accent); }
+
+  .review-section { margin-top: 24px; text-align: left; }
+  .review-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 14px; }
+  .review-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 10px; font-size: 14px; }
+  .review-item .rq { color: var(--text); font-weight: 500; margin-bottom: 8px; }
+  .review-item .ra { font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .tag.c { background: rgba(67,232,176,.15); color: var(--correct); }
+  .tag.w { background: rgba(255,107,138,.15); color: var(--wrong); }
+
+  .btn-restart {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 100px;
+    padding: 14px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .18s;
+    margin-top: 8px;
+  }
+  .btn-restart:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 560px) {
+    .welcome-card, .result-card { padding: 32px 22px; }
+    .question-card { padding: 24px 20px; }
+    .option-btn { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="screen active" id="welcomeScreen">
+  <div class="welcome-card">
+    <div class="logo-badge"><div class="dot"></div>ExamMar v2.0</div>
+    <h1 class="welcome-title">Siap Menghadapi Ujian?</h1>
+    <p class="welcome-sub">Jawab dengan cermat dan raih skor terbaikmu!🤩</p>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="val">20</span>
+        <div class="lbl">Soal</div>
+      </div>
+      <div class="info-item">
+        <span class="val">30</span>
+        <div class="lbl">Menit</div>
+      </div>
+      <div class="info-item">
+        <span class="val">100</span>
+        <div class="lbl">Nilai Max</div>
+      </div>
+    </div>
+
+    <div class="name-input-wrap">
+      <label>Nama Peserta</label>
+      <input type="text" id="nameInput" placeholder="Masukkan nama kamu…" maxlength="40">
+    </div>
+
+      <div class="name-input-wrap">
+      <label>Kelas</label>
+      <input type="text" id="classInput" placeholder="Masukkan kelas kamu…" maxlength="40">
+    </div>
+
+    <button class="btn-primary" id="startBtn" onclick="startExam()" disabled>
+      Mulai Ujian
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="screen" id="quizScreen">
+  <div class="quiz-header">
+    <div class="q-counter">Soal <span id="qNum">1</span> dari <span id="qTotal">10</span></div>
+    <div class="timer-wrap" id="timerWrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span id="timerDisplay">30:00</span>
+    </div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:10%"></div>
+  </div>
+
+  <div class="question-card">
+    <div class="question-num" id="questionNum">Pertanyaan 01</div>
+    <div class="question-text" id="questionText"></div>
+  </div>
+
+  <div class="options-grid" id="optionsGrid"></div>
+
+  <div class="nav-row">
+    <button class="btn-next" id="nextBtn" onclick="nextQuestion()" disabled>
+      Lanjut
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="screen" id="resultScreen">
+  <div class="result-card">
+    <div class="score-ring">
+      <svg width="160" height="160">
+        <circle cx="80" cy="80" r="70" fill="none" stroke="#1c2035" stroke-width="10"/>
+        <circle cx="80" cy="80" r="70" fill="none" stroke="url(#sg)" stroke-width="10"
+          stroke-linecap="round" stroke-dasharray="440" id="scoreArc" style="stroke-dashoffset:440;transition:stroke-dashoffset 1.5s ease"/>
+        <defs>
+          <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#43e8b0"/>
+            <stop offset="100%" stop-color="#6c8eff"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="score-val" id="scoreVal">0</span>
+      <span class="score-lbl">Skor</span>
+    </div>
+
+    <h2 class="result-title" id="resultTitle">Selesai!</h2>
+    <p class="result-sub" id="resultSub"></p>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <span class="sv correct-col" id="correctCount">0</span>
+        <div class="sl">Benar</div>
+      </div>
+      <div class="stat-box">
+        <span class="sv wrong-col" id="wrongCount">0</span>
+        <div class="sl">Salah</div>
+      </div>
+      <div class="stat-box">
+        <span class="sv time-col" id="timeUsed">0:00</span>
+        <div class="sl">Waktu</div>
+      </div>
+    </div>
+
+    <div class="review-section">
+      <div class="review-title">Pembahasan Jawaban</div>
+      <div id="reviewList"></div>
+    </div>
+
+    <button class="btn-restart" onclick="restartExam()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-6.51"/></svg>
+      Ulangi Ujian
+    </button>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+  // (7 soal)
+  { q: "Apa fungsi atribut defer pada tag &lt;script&gt;?", opts: ["Mencegah script dieksekusi sama sekali","Mengeksekusi script setelah seluruh dokumen HTML selesai di-parse","Mengeksekusi script secara paralel sebelum HTML selesai","Mengubah script menjadi module"], ans: 1 },
+  { q: "Elemen HTML mana yang tidak termasuk dalam kategori 'void element'?", opts: ["&lt;br&gt;","&lt;img&gt;","&lt;span&gt;","&lt;input&gt;"], ans: 2 },
+  { q: "Properti CSS mana yang tidak berpengaruh pada elemen dengan display: inline?", opts: ["color","font-size","width dan height","padding-left"], ans: 2 },
+  { q: "Apa kepanjangan dari PHP?", opts: ["Private Hypertext Processor","Personal Home Page","PHP Hypertext Preprocessor","Public Home Preprocessor"], ans: 2 },
+  { q: "Fungsi PHP mana yang digunakan untuk mencegah SQL Injection?", opts: ["mysqli_real_escape_string()","htmlspecialchars()","strip_tags()"," PDO::prepare() dengan parameterized query"], ans: 3 },
+  { q: "Apa perbedaan include dan require di PHP?", opts: ["include hanya untuk file HTML, require untuk PHP"," Jika file tidak ditemukan, include memberi warning lalu lanjut; require memberi fatal error dan berhenti","require lebih lambat dari include","Tidak ada perbedaan"], ans: 1 },
+  { q: "Apa perbedaan == dan .equals() di Java untuk membandingkan String?", opts: ["Keduanya sama saja","equals() hanya untuk angka",") == lebih akurat dari .equals()"," == membandingkan referensi objek, .equals() membandingkan isi/nilai string"], ans: 3 },
+  // (7 soal)
+  { q: "Apa kepanjangan dari CSS?", opts: ["Cascading Style Sheets","Creative Style System","Computer Style Sheets","Colorful Style Sheets"], ans: 0 },
+  { q: "Property CSS yang digunakan untuk mengubah warna teks adalah...", opts: ["text-color","font-color","color","foreground-color"], ans: 2 },
+  { q: "Cara penulisan CSS yang benar untuk selector class adalah...", opts: ["#namaclass","namaclass","*namaclass",".namaclass"], ans: 3 },
+  { q: "Property CSS untuk mengatur jarak di dalam elemen (antara konten dan border) adalah...", opts: ["margin","spacing","padding","border-spacing"], ans: 2 },
+  { q: "Nilai CSS display mana yang membuat elemen tampil sejajar (inline) tapi bisa diatur lebar dan tingginya?", opts: ["inline","block","inline-block","flex"], ans: 2 },
+  { q: "Property CSS yang digunakan untuk mengubah ukuran font adalah...", opts: ["font-weight","text-size","font-size","text-style"], ans: 2 },
+  { q: "Apa output dari kode<br>console.log(typeof null);", opts: ["null","object","undefined","boolean"], ans: 1 },
+  // (6 soal)
+  { q: "Apa yang terjadi pada <p hidden>Hello</p>?", opts: ["Elemen dihapus dari DOM sepenuhnya"," Error karena hidden bukan atribut valid","Elemen tetap ada di DOM tapi tidak terlihat","Menampilkan Hello dengan warna abu-abu"], ans: 3 },
+  { q: "Cara yang benar untuk mencetak teks ke layar di PHP adalah...", opts: ["console.log()","print_text()","echo","System.out.println()"], ans: 2 },
+  { q: "Simbol yang digunakan untuk mendefinisikan variabel di PHP adalah...", opts: ["@","#","&","$"], ans: 3 },
+  { q: "Fungsi PHP untuk mendapatkan panjang sebuah string adalah...", opts: ["len()","count()","strlen()","string_length()"], ans: 2 },
+  { q: "Ekstensi file PHP yang benar adalah...", opts: [".html",".php",".py",".js"], ans: 1 },
+  { q: "Cara menulis komentar satu baris di PHP adalah...", opts: [" &lt;!-- komentar --&gt;","# komentar atau // komentar","/* komentar */","** komentar"], ans: 1 }
+];
+
+let current = 0, answers = [], timerInterval, secondsLeft, startSeconds;
+const TOTAL_TIME = 30 * 60;
+let userName = '';
+
+const nameInput = document.getElementById('nameInput');
+const startBtn  = document.getElementById('startBtn');
+nameInput.addEventListener('input', () => { startBtn.disabled = nameInput.value.trim().length === 0; });
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startExam() {
+  userName = nameInput.value.trim();
+  current = 0; answers = [];
+  secondsLeft = TOTAL_TIME; startSeconds = TOTAL_TIME;
+  showScreen('quizScreen');
+  renderQuestion();
+  startTimer();
+}
+
+function renderQuestion() {
+  const q = QUESTIONS[current];
+  const letters = ['A','B','C','D'];
+  document.getElementById('qNum').textContent = current + 1;
+  document.getElementById('qTotal').textContent = QUESTIONS.length;
+  document.getElementById('questionNum').textContent = `Pertanyaan ${String(current+1).padStart(2,'0')}`;
+  
+  // Menggunakan innerHTML di sini karena ada beberapa soal menggunakan tag <br>
+  document.getElementById('questionText').innerHTML = q.q; 
+  document.getElementById('progressFill').style.width = ((current+1)/QUESTIONS.length*100) + '%';
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<div class="option-letter">${letters[i]}</div><div class="option-text">${opt}</div>`;
+    btn.onclick = () => selectOption(i, btn);
+    grid.appendChild(btn);
+  });
+
+  const nb = document.getElementById('nextBtn');
+  nb.disabled = true; nb.classList.remove('highlight');
+  const isLast = current === QUESTIONS.length - 1;
+  nb.innerHTML = isLast
+    ? 'Selesai <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+    : 'Lanjut <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+}
+
+function selectOption(idx, clickedBtn) {
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b => b.classList.remove('selected'));
+  clickedBtn.classList.add('selected');
+  answers[current] = idx;
+  const nb = document.getElementById('nextBtn');
+  nb.disabled = false; nb.classList.add('highlight');
+}
+
+function nextQuestion() {
+  if (current < QUESTIONS.length - 1) { current++; renderQuestion(); }
+  else finishExam();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    secondsLeft--;
+    updateTimerDisplay();
+    if (secondsLeft <= 0) { clearInterval(timerInterval); finishExam(); }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(secondsLeft/60), s = secondsLeft%60;
+  document.getElementById('timerDisplay').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const tw = document.getElementById('timerWrap');
+  tw.className = 'timer-wrap';
+  if (secondsLeft <= 60) tw.classList.add('danger');
+  else if (secondsLeft <= 180) tw.classList.add('warn');
+}
+
+function finishExam() {
+  clearInterval(timerInterval);
+  const timeUsed = startSeconds - secondsLeft;
+  let correct = 0;
+  answers.forEach((a, i) => { if (a === QUESTIONS[i].ans) correct++; });
+  const score = Math.round((correct / QUESTIONS.length) * 100);
+  const wrong = QUESTIONS.length - correct;
+
+  const arc = document.getElementById('scoreArc');
+  const circ = 2 * Math.PI * 70;
+  arc.style.strokeDasharray = circ;
+  setTimeout(() => { arc.style.strokeDashoffset = circ - (circ * score / 100); }, 200);
+
+  let sv = 0;
+  const svEl = document.getElementById('scoreVal');
+  const sv_int = setInterval(() => { sv = Math.min(sv+2, score); svEl.textContent = sv; if (sv >= score) clearInterval(sv_int); }, 20);
+
+  document.getElementById('correctCount').textContent = correct;
+  document.getElementById('wrongCount').textContent = wrong;
+  const tm = Math.floor(timeUsed/60), ts = timeUsed%60;
+  document.getElementById('timeUsed').textContent = `${tm}:${String(ts).padStart(2,'0')}`;
+
+  let title, sub;
+  if (score >= 90) { title = '🏆 Sempurna!'; sub = `Luar biasa, ${userName}! Skor kamu hampir sempurna.`; }
+  else if (score >= 75) { title = '🌟 Bagus Sekali!'; sub = `Kerja keras kamu membuahkan hasil, ${userName}!`; }
+  else if (score >= 60) { title = '👍 Cukup Baik!'; sub = `Lumayan, ${userName}. Terus tingkatkan ya!`; }
+  else { title = '📚 Perlu Belajar Lebih'; sub = `Jangan menyerah, ${userName}! Coba lagi dan kamu pasti bisa!`; }
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent = sub;
+
+  const rl = document.getElementById('reviewList');
+  rl.innerHTML = '';
+  QUESTIONS.forEach((q, i) => {
+    const isCorrect = answers[i] === q.ans;
+    const div = document.createElement('div');
+    div.className = 'review-item';
+    div.innerHTML = `
+      <div class="rq">${i+1}. ${q.q}</div>
+      <div class="ra">
+        <span class="tag ${isCorrect?'c':'w'}">${isCorrect?'✓ Benar':'✗ Salah'}</span>
+      </div>`;
+    rl.appendChild(div);
+  });
+
+  showScreen('resultScreen');
+}
+
+function restartExam() {
+  showScreen('welcomeScreen');
+  nameInput.value = '';
+  startBtn.disabled = true;
+}
+</script>
+</body>
+</html>
